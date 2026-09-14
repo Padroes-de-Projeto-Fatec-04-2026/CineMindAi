@@ -8,6 +8,7 @@
 **CineMindAi** é um agente inteligente de recomendação de filmes construído com **Spring AI** e **Ollama** (utilizando modelos locais e 100% open source). 
 
 O projeto tem um forte foco educacional e arquitetural, demonstrando a aplicação prática de diversos padrões de projeto (Design Patterns) como **State**, **Command**, **Strategy** e **Observer** em um cenário moderno de IA generativa.
+
 ---
 
 ## 🏗️ Arquitetura
