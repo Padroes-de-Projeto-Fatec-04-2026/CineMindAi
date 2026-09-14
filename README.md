@@ -1,4 +1,4 @@
-# FindMoviesAI
+# CineMindAi
 
 FindMoviesAI é um Knowledge Assistant especializado na pesquisa e síntese de informações sobre filmes e séries.
 
