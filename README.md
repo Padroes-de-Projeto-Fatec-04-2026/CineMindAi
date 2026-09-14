@@ -1,71 +1,34 @@
 # FindMoviesAI
 
-Agente de recomendação de filmes construído com **Spring AI** + **Ollama** (modelo local,
-100% open source), demonstrando os padrões de projeto **State**, **Command**, **Strategy** e
-**Observer**. Veja a explicação detalhada da arquitetura, com diagramas UML, em
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+FindMoviesAI é um Knowledge Assistant especializado na pesquisa e síntese de informações sobre filmes e séries.
 
-> A consulta real a dados/API de filmes (ex.: TMDB/OMDb) ainda não realizada. Este módulo já expõe o ponto de integração (`MovieCatalogPort`) e usa,
-> por enquanto, uma implementação stub em memória (`InMemoryMovieCatalogAdapter`) para rodar
-> de ponta a ponta.
+## Arquitetura do Agente
 
-## Pré-requisitos
+O sistema é construído utilizando os seguintes padrões de design voltados para a criação de Agentes de IA escaláveis e modulares:
 
-1. [Ollama](https://ollama.com/) instalado e rodando localmente:
-   ```bash
-   ollama serve
-   ollama pull llama3.1
-   ```
-2. Java 17+ e o Maven Wrapper incluso no projeto (não precisa instalar Maven).
+- **Strategy Pattern (Planning Strategies)**:
+  A interface de planejamento permite múltiplas implementações (`ReActPlanner`, `PlanThenExecutePlanner`, `HumanInTheLoopPlanner`).
+  *Benefícios*: O agente pode alternar modos de planejamento baseando-se na complexidade da tarefa sem alterar o código em tempo de execução.
 
-## Rodando o projeto
+- **Chain of Responsibility (Advisor Chains)**:
+  "Advisors" processam requisições em sequência, adicionando comportamentos. O ambiente de execução do agente configura a cadeia.
+  *Benefícios*: Separação de responsabilidades; facilidade para adicionar logs, regras de conformidade (compliance), etc.
 
-```bash
-./mvnw spring-boot:run
-```
+- **Observer Concepts (Execution Monitoring)**:
+  O loop de observação do agente implementa o padrão observer: o executor notifica o contexto (e os ouvintes) sobre os resultados das ferramentas.
+  *Benefícios*: Permite a criação de dashboards em tempo real, alertas e loops de feedback.
 
-A aplicação sobe em `http://localhost:8080`. O modelo/URL do Ollama podem ser ajustados em
-`src/main/resources/application.properties`.
+- **Dependency Injection (Spring Integration)**:
+  Todos os componentes são beans do Spring (ferramentas, gerenciadores de memória e planejadores são injetados).
+  *Benefícios*: Recursos empresariais (transações, segurança, métricas) são herdados de forma automática.
 
-## Testando via curl
+## Fontes de Dados e Coleta de Informações
 
-**Pedido direto (Plan-then-Execute, escolhido automaticamente):**
-```bash
-curl -X POST http://localhost:8080/api/agent/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Recomende filmes de ficção científica parecidos com Interestelar"}'
-```
+As informações sobre filmes e séries são consultadas a partir do serviço **OMDb API**, utilizando a integração ou wrapper:
+- [api-omdb (Omertron)](https://github.com/Omertron/api-omdb.git)
 
-**Pedido pedindo confirmação (Human-in-the-loop):**
-```bash
-curl -X POST http://localhost:8080/api/agent/chat \
-  -H "Content-Type: application/json" \
-  -d '{"conversationId": "demo-1", "message": "Pode confirmar antes de buscar filmes de terror?"}'
+Além da comunicação com serviços externos, também utiliza-se o **Ollama** de forma local para processamento de inferência do agente e síntese de resultados.
 
-# resposta virá com "state": "AWAITING_HUMAN_APPROVAL" — aprove com:
-curl -X POST http://localhost:8080/api/agent/chat/demo-1/approve
-```
+## Integração
 
-**Forçando um modo específico de planejamento:**
-```bash
-curl -X POST http://localhost:8080/api/agent/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Quero algo pra assistir hoje", "plannerMode": "REACT"}'
-```
-(`plannerMode` aceita `AUTO`, `REACT`, `PLAN_THEN_EXECUTE`, `HUMAN_IN_THE_LOOP`.)
-
-**Acompanhando a execução em tempo real (Observer via SSE):**
-```bash
-curl -N http://localhost:8080/api/agent/chat/demo-1/events
-```
-
-## Testes automatizados
-
-```bash
-./mvnw test
-```
-
-Os testes em `src/test/java/.../agent/` cobrem o `CommandRegistry`, o `PlannerSelector` e as
-transições de estado do `AgentExecutionContext` com fakes — não dependem do Ollama estar
-rodando. O teste `CineMindAiApplicationTests` sobe o contexto Spring completo (requer que as
-dependências resolvam normalmente; não faz chamadas ao Ollama).
+A configuração do projeto suporta o isolamento das chaves da API de serviços locais e externos por meio de variáveis de ambiente.
