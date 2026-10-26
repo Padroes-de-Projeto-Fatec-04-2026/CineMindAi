@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.plaf.basic.BasicButtonUI;
 import javax.swing.text.*;
 
 /** Desktop chat for CineMindAi. Start the Spring Boot API before launching this class. */
@@ -19,7 +20,7 @@ public class CineMindSwingApplication {
     private static final Color TEXT = new Color(239, 241, 247), MUTED = new Color(145, 151, 166), ACCENT = new Color(211, 168, 91);
     private final JFrame frame = new JFrame("CineMind · seu guia de cinema");
     private final JPanel messages = new JPanel();
-    private final JPanel suggestions = new JPanel(new GridLayout(2, 2, 8, 8));
+    private final JPanel suggestions = new JPanel(new FlowLayout(FlowLayout.LEFT, 9, 6));
     private final JTextArea input = new JTextArea(2, 30);
     private final JLabel status = new JLabel("●  Conectando ao CineMind");
     private final JButton send = new JButton("Enviar  ➤");
@@ -69,7 +70,7 @@ public class CineMindSwingApplication {
         JScrollPane scroll = new JScrollPane(messages); scroll.setBorder(null); scroll.setOpaque(false); scroll.getViewport().setOpaque(false); scroll.getVerticalScrollBar().setUnitIncrement(18);
         main.add(scroll, BorderLayout.CENTER);
         JPanel bottom = new JPanel(); bottom.setOpaque(false); bottom.setLayout(new BoxLayout(bottom, BoxLayout.Y_AXIS));
-        suggestions.setOpaque(false); suggestions.setBorder(new EmptyBorder(0, 0, 18, 0)); bottom.add(suggestions);
+        suggestions.setOpaque(false); suggestions.setBorder(new EmptyBorder(0, 0, 16, 0)); bottom.add(suggestions);
         JPanel compose = new JPanel(new BorderLayout(12, 0)); compose.setBackground(CARD); compose.setBorder(new EmptyBorder(11, 14, 11, 12));
         input.setLineWrap(true); input.setWrapStyleWord(true); input.setFont(new Font("SansSerif", Font.PLAIN, 14)); input.setForeground(TEXT); input.setCaretColor(ACCENT); input.setBackground(CARD); input.setBorder(null);
         input.setText(""); input.setToolTipText("Escreva sobre o que você quer assistir...");
@@ -80,7 +81,7 @@ public class CineMindSwingApplication {
     }
 
     private void startConversation() {
-        active = new Conversation(UUID.randomUUID().toString()); conversations.add(active); refreshHistory();
+        active = new Conversation(UUID.randomUUID().toString()); refreshHistory();
         messages.removeAll(); addWelcome(); configureSuggestions(); approve.setVisible(false); messages.revalidate(); messages.repaint();
     }
     private void addWelcome() {
@@ -91,8 +92,8 @@ public class CineMindSwingApplication {
         messages.add(hero); messages.add(Box.createVerticalGlue());
     }
     private void configureSuggestions() {
-        suggestions.removeAll(); String[] prompts = {"Filmes de ficção científica para pensar", "Algo parecido com Interestelar", "Uma comédia leve para hoje", "Suspenses que prendem do começo ao fim"};
-        for (String p : prompts) { JButton b = button(p, CARD, Color.BLACK); b.setFont(new Font("SansSerif", Font.PLAIN, 12)); b.setBorder(new EmptyBorder(9, 12, 9, 12)); b.addActionListener(e -> { input.setText(p); sendMessage(); }); suggestions.add(b); }
+        suggestions.removeAll(); String[] prompts = {"Ficção científica", "Parecidos com Interestelar", "Comédia leve", "Suspenses envolventes"};
+        for (String p : prompts) { JButton b = button(p, CARD, TEXT); b.setFont(new Font("SansSerif", Font.PLAIN, 12)); b.setBorder(new EmptyBorder(9, 12, 9, 12)); b.addActionListener(e -> { input.setText(p); sendMessage(); }); suggestions.add(b); }
         suggestions.revalidate(); suggestions.repaint();
     }
     private void sendMessage() {
@@ -105,7 +106,7 @@ public class CineMindSwingApplication {
             if (response.statusCode() < 200 || response.statusCode() >= 300) throw new IllegalStateException("A API respondeu com erro (" + response.statusCode() + ").");
             return mapper.readTree(response.body());
         } protected void done() { try { JsonNode r = get(); String reply = r.path("reply").asText("Não consegui preparar uma resposta agora."); appendBubble("CineMind", reply, false); String state = r.path("state").asText(""); boolean waiting = state.equalsIgnoreCase("AWAITING_HUMAN_APPROVAL"); approve.setVisible(waiting); setBusy(false, waiting ? "●  Aguardando sua aprovação" : "●  Pronto para conversar"); }
-            catch (Exception ex) { appendBubble("CineMind", "Não consegui conectar ao agente. Confira se a API está rodando em " + baseUrl + ".", false); approve.setVisible(false); setBusy(false, "●  API indisponível"); } } }.execute();
+        catch (Exception ex) { appendBubble("CineMind", "Não consegui conectar ao agente. Confira se a API está rodando em " + baseUrl + ".", false); approve.setVisible(false); setBusy(false, "●  API indisponível"); } } }.execute();
     }
     private void approvePlan() {
         if (active == null) return; setBusy(true, "●  Executando sua busca…");
@@ -114,11 +115,18 @@ public class CineMindSwingApplication {
             HttpResponse<String> res = client.send(req, HttpResponse.BodyHandlers.ofString()); if (res.statusCode() < 200 || res.statusCode() >= 300) throw new IllegalStateException("Aprovação não concluída"); return mapper.readTree(res.body());
         } protected void done() { try { JsonNode r = get(); appendBubble("CineMind", r.path("reply").asText("Busca concluída."), false); approve.setVisible(false); setBusy(false, "●  Pronto para conversar"); } catch (Exception e) { appendBubble("CineMind", "Não foi possível aprovar agora. Tente novamente.", false); setBusy(false, "●  Erro na aprovação"); } } }.execute();
     }
-    private String baseUrl = System.getProperty("cinemind.api", "http://localhost:8080");
+    private final String baseUrl = System.getProperty("cinemind.api", "http://localhost:8080");
     private String apiUrl(String path) { return baseUrl + path; }
     private void checkConnection() { new SwingWorker<Boolean, Void>() { protected Boolean doInBackground() throws Exception { HttpRequest r = HttpRequest.newBuilder(URI.create(apiUrl("/api/agent/chat"))).timeout(Duration.ofSeconds(3)).GET().build(); return client.send(r, HttpResponse.BodyHandlers.discarding()).statusCode() < 500; } protected void done(){ try { status.setText(get() ? "●  Agente conectado" : "●  API indisponível"); status.setForeground(get() ? new Color(104, 185, 139) : new Color(220, 120, 100)); } catch(Exception e){ status.setText("●  Inicie a API para conversar"); status.setForeground(new Color(220, 120, 100)); } } }.execute(); }
     private void appendBubble(String who, String text, boolean user) {
-        if (active != null) { active.history.add(new String[]{who, text, Boolean.toString(user)}); if (user && active.title == null) active.title = text.length() > 25 ? text.substring(0, 25) + "…" : text; refreshHistory(); }
+        if (active != null) {
+            active.history.add(new String[]{who, text, Boolean.toString(user)});
+            if (user && !conversations.contains(active)) {
+                active.title = text.length() > 25 ? text.substring(0, 25) + "…" : text;
+                conversations.add(active);
+            }
+            refreshHistory();
+        }
         renderBubble(who, text, user);
     }
     private void renderBubble(String who, String text, boolean user) {
@@ -132,6 +140,6 @@ public class CineMindSwingApplication {
     private void setBusy(boolean busy, String text) { send.setEnabled(!busy); approve.setEnabled(!busy); status.setText(text); }
     private static JLabel label(String t, int size, Color color, boolean bold) { JLabel l = new JLabel(t); l.setForeground(color); l.setFont(new Font("SansSerif", bold ? Font.BOLD : Font.PLAIN, size)); return l; }
     private static JButton button(String t, Color bg, Color fg) { JButton b = new JButton(t); styleButton(b,bg,fg); return b; }
-    private static void styleButton(JButton b, Color bg, Color fg) { b.setBackground(bg); b.setForeground(fg); b.setFont(new Font("SansSerif", Font.BOLD, 12)); b.setFocusPainted(false); b.setBorder(new EmptyBorder(11,14,11,14)); b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); }
+    private static void styleButton(JButton b, Color bg, Color fg) { b.setUI(new BasicButtonUI()); b.setOpaque(true); b.setContentAreaFilled(true); b.setBorderPainted(false); b.setBackground(bg); b.setForeground(fg); b.setFont(new Font("SansSerif", Font.BOLD, 12)); b.setFocusPainted(false); b.setBorder(new EmptyBorder(11,14,11,14)); b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); }
     private static class Conversation { final String id; String title; final java.util.List<String[]> history = new ArrayList<>(); Conversation(String id){this.id=id;} }
 }
