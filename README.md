@@ -11,10 +11,31 @@ O projeto tem um forte foco educacional e arquitetural, demonstrando a aplicaç�
 
 ---
 
+## 📐 Padrões de Projeto (Design Patterns)
+
+O projeto tem como foco central a aplicação prática e educacional dos padrões de projeto do catálogo GoF ([Refactoring.Guru](https://refactoring.guru/design-patterns)).
+
+Para ver a explicação detalhada de cada padrão, trechos de código e todos os diagramas UML, acesse:
+👉 **[Guia Completo de Padrões de Projeto (DESIGN_PATTERNS.md)](docs/DESIGN_PATTERNS.md)**
+
+### Resumo dos Padrões Aplicados:
+| Padrão | Categoria | Onde atua no CineMindAi |
+| :--- | :--- | :--- |
+| **State** | Comportamental | Ciclo de vida explícito do agente (`Planning`, `ExecutingCommand`, `AwaitingHumanApproval`, etc.). |
+| **Strategy** | Comportamental | Modos de planejamento com LLM intercambiáveis (`ReAct` vs `Plan-then-Execute`). |
+| **Command** | Comportamental | Ações e buscas de filmes desacopladas como comandos despachados pelo `CommandRegistry`. |
+| **Observer** | Comportamental | Emissão de eventos em tempo real para logging, rastreamento de trace e SSE. |
+| **Decorator** | Estrutural | `HumanInTheLoopStrategy` decora a estratégia base exigindo aprovação humana. |
+| **Adapter & Proxy** | Estruturais | `HybridMovieCatalogAdapter` adapta a OMDb API com caching em memória e fallback automático. |
+| **Facade** | Estrutural | `MovieRecommendationAgentService` simplifica a interface do agente para o controller. |
+| **Chain of Responsibility** | Comportamental | Cadeia de *Advisors* do Spring AI interceptando chamadas ao Ollama (memória e log). |
+
+---
+
 ## 🏗️ Arquitetura
 
-A arquitetura detalhada, juntamente com os diagramas UML, está documentada separadamente. 
-📖 **[Veja a explicação detalhada da arquitetura aqui](docs/ARCHITECTURE.md)**.
+A arquitetura detalhada do sistema, diagrama de componentes e contratos de integração estão documentados em:
+📖 **[Documento de Arquitetura (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md)**
 
 ## 🚀 Pré-requisitos
 

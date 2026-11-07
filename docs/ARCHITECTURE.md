@@ -24,12 +24,21 @@ e chama `run()`. A partir daí:
 
 Por que cada padrão foi escolhido:
 
-| Padrão | Onde | Por quê |
-|---|---|---|
-| **State** | `agent.state.*` + `AgentExecutionContext` | Torna o ciclo de vida do agente explícito e impede estados ilegais (ex.: executar um comando antes de existir um plano, ou responder antes de aguardar aprovação humana). |
-| **Command** | `agent.command.*` | Cada ação do agente (busca, recomendação, detalhes) é um objeto autocontido, permitindo despacho uniforme por nome, histórico de execução e fácil adição de novos comandos sem tocar no restante do agente. |
-| **Strategy** | `agent.strategy.*` | O modo de planejamento (ReAct / Plan-then-Execute / Human-in-the-loop) é intercambiável em tempo de execução, escolhido por `PlannerSelector` conforme a complexidade do pedido, sem alterar o runtime. |
-| **Observer** | `agent.observer.*` | O `AgentExecutionContext` (Subject) notifica múltiplos ouvintes independentes a cada evento relevante, viabilizando logging, uma trace consultável (dashboard) e um stream SSE em tempo real, sem acoplar essas preocupações ao core do agente. |
+| Padrão | Categoria (Refactoring.Guru) | Onde | Por quê |
+|---|---|---|---|
+| **State** | Comportamental | `agent.state.*` + `AgentExecutionContext` | Torna o ciclo de vida do agente explícito e impede estados ilegais (ex.: executar um comando antes de existir um plano, ou responder antes de aguardar aprovação humana). |
+| **Command** | Comportamental | `agent.command.*` | Cada ação do agente (busca, recomendação, detalhes) é um objeto autocontido, permitindo despacho uniforme por nome, histórico de execução e fácil adição de novos comandos sem tocar no restante do agente. |
+| **Strategy** | Comportamental | `agent.strategy.*` | O modo de planejamento (ReAct / Plan-then-Execute / Human-in-the-loop) é intercambiável em tempo de execução, escolhido por `PlannerSelector` conforme a complexidade do pedido, sem alterar o runtime. |
+| **Observer** | Comportamental | `agent.observer.*` | O `AgentExecutionContext` (Subject) notifica múltiplos ouvintes independentes a cada evento relevante, viabilizando logging, uma trace consultável (dashboard) e um stream SSE em tempo real, sem acoplar essas preocupações ao core do agente. |
+| **Chain of Responsibility** | Comportamental | `config/ChatClientConfig.java` | Cadeia nativa de *Advisors* do Spring AI (`MessageChatMemoryAdvisor` → `SimpleLoggerAdvisor`) que intercepta chamadas ao LLM. |
+| **Decorator** | Estrutural | `agent.strategy.HumanInTheLoopStrategy` | Envolve `PlanThenExecuteStrategy` implementando a mesma interface `PlanningStrategy` e acrescentando a exigência de aprovação humana (`withHumanApproval()`) sem modificar a classe base. |
+| **Adapter** | Estrutural | `movie.HybridMovieCatalogAdapter` + `movie.omdb.OmdbService` | Converte a interface e modelos da biblioteca externa `OmdbApi` (`OmdbVideoFull`, `SearchResults`) para o contrato de domínio `MovieCatalogPort`. |
+| **Proxy** | Estrutural | `movie.HybridMovieCatalogAdapter` | Atua como *Caching Proxy* (`searchCache`, `detailsCache`) e *Fallback/Protection Proxy* (delegando para `InMemoryMovieCatalogAdapter` quando a OMDb falha ou não suporta a operação). |
+| **Facade** | Estrutural | `agent.core.MovieRecommendationAgentService` | Expõe uma fachada simplificada (`handleMessage`, `approve`) para a camada web, ocultando a orquestração interna de contexto, sessão, serviços e trace. |
+| **Composite** | Estrutural | `ui.CineMindSwingApplication` | Composição em árvore de componentes visuais (`JPanel` contendo subpainéis, bolhas de mensagem e controles folhas) tratados uniformemente. |
+| **Builder & Singleton (DI)** | Criacional | `OmdbBuilder`, `MessageWindowChatMemory.builder()`, Beans Spring | Construção fluente passo a passo de objetos complexos e gerenciamento de instâncias únicas pelo container IoC do Spring. |
+
+> 📐 **Diagramas no Estilo Astah UML & Padrões:** Veja o guia completo com a explicação de cada padrão, trechos de código e diagramas UML no estilo **Astah UML** em [`DESIGN_PATTERNS.md`](./DESIGN_PATTERNS.md) e na pasta [`docs/uml-astah/`](./uml-astah/).
 
 Outros pontos do enunciado, já cobertos nativamente pelo Spring/Spring AI (sem reinventar):
 
