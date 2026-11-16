@@ -25,6 +25,11 @@ public class GetMovieDetailsCommand implements AgentCommand {
     }
 
     @Override
+    public String inputSchema() {
+        return AgentCommand.singleStringArgumentSchema("titleOrId", "Título ou IMDb ID (ex.: tt0816692) do filme");
+    }
+
+    @Override
     public CommandResult execute(CommandContext context) {
         String titleOrId = context.argument("titleOrId");
         MovieDetails details = catalog.getDetails(titleOrId == null ? "" : titleOrId);

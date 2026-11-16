@@ -2,6 +2,8 @@ package br.com.fatec.cinemindai.agent.state;
 
 import br.com.fatec.cinemindai.agent.command.CommandExecutionRecord;
 import br.com.fatec.cinemindai.agent.core.AgentExecutionContext;
+import br.com.fatec.cinemindai.agent.prompt.AgentPrompts;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.ai.chat.memory.ChatMemory;
 
@@ -21,12 +23,10 @@ public class RespondingState implements AgentState {
 
             String reply = context.services().chatClient().prompt()
                     .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, context.conversationId()))
-                    .system("""
-                            Você é um assistente de recomendação de filmes, simpático e direto.
-                            Use os resultados de comandos abaixo para responder ao usuário em português,
-                            de forma natural (não mencione nomes de comandos, apenas o conteúdo útil).
-                            """)
-                    .user("Pedido original: " + context.userMessage() + "\n\nResultados:\n" + observations)
+                    .system(AgentPrompts.RESPONDING_SYSTEM.render())
+                    .user(AgentPrompts.RESPONDING_USER.render(Map.of(
+                            "request", context.userMessage(),
+                            "results", observations)))
                     .call()
                     .content();
 

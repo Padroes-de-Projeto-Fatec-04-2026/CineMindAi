@@ -28,10 +28,11 @@ Por que cada padrão foi escolhido:
 |---|---|---|---|
 | **State** | Comportamental | `agent.state.*` + `AgentExecutionContext` | Torna o ciclo de vida do agente explícito e impede estados ilegais (ex.: executar um comando antes de existir um plano, ou responder antes de aguardar aprovação humana). |
 | **Command** | Comportamental | `agent.command.*` | Cada ação do agente (busca, recomendação, detalhes) é um objeto autocontido, permitindo despacho uniforme por nome, histórico de execução e fácil adição de novos comandos sem tocar no restante do agente. |
-| **Strategy** | Comportamental | `agent.strategy.*` | O modo de planejamento (ReAct / Plan-then-Execute / Human-in-the-loop) é intercambiável em tempo de execução, escolhido por `PlannerSelector` conforme a complexidade do pedido, sem alterar o runtime. |
+| **Strategy** | Comportamental | `agent.strategy.*` | O modo de planejamento (Tool Calling nativo do Spring AI / ReAct / Plan-then-Execute / Human-in-the-loop) é intercambiável em tempo de execução, escolhido por `PlannerSelector` conforme a complexidade do pedido, sem alterar o runtime. |
 | **Observer** | Comportamental | `agent.observer.*` | O `AgentExecutionContext` (Subject) notifica múltiplos ouvintes independentes a cada evento relevante, viabilizando logging, uma trace consultável (dashboard) e um stream SSE em tempo real, sem acoplar essas preocupações ao core do agente. |
 | **Chain of Responsibility** | Comportamental | `config/ChatClientConfig.java` | Cadeia nativa de *Advisors* do Spring AI (`MessageChatMemoryAdvisor` → `SimpleLoggerAdvisor`) que intercepta chamadas ao LLM. |
 | **Decorator** | Estrutural | `agent.strategy.HumanInTheLoopStrategy` | Envolve `PlanThenExecuteStrategy` implementando a mesma interface `PlanningStrategy` e acrescentando a exigência de aprovação humana (`withHumanApproval()`) sem modificar a classe base. |
+| **Adapter** | Estrutural | `agent.tool.AgentCommandToolCallback` | Adapta cada `AgentCommand` para a interface `ToolCallback` do Spring AI, expondo os comandos ao LLM como ferramentas nativas (tool calling). |
 | **Adapter** | Estrutural | `movie.HybridMovieCatalogAdapter` + `movie.omdb.OmdbService` | Converte a interface e modelos da biblioteca externa `OmdbApi` (`OmdbVideoFull`, `SearchResults`) para o contrato de domínio `MovieCatalogPort`. |
 | **Proxy** | Estrutural | `movie.HybridMovieCatalogAdapter` | Atua como *Caching Proxy* (`searchCache`, `detailsCache`) e *Fallback/Protection Proxy* (delegando para `InMemoryMovieCatalogAdapter` quando a OMDb falha ou não suporta a operação). |
 | **Facade** | Estrutural | `agent.core.MovieRecommendationAgentService` | Expõe uma fachada simplificada (`handleMessage`, `approve`) para a camada web, ocultando a orquestração interna de contexto, sessão, serviços e trace. |
@@ -49,6 +50,23 @@ Outros pontos do enunciado, já cobertos nativamente pelo Spring/Spring AI (sem 
 - **Chain of Responsibility (Advisors)**: o `ChatClient` é configurado em
   `config/ChatClientConfig.java` com `MessageChatMemoryAdvisor` (memória de conversa) e
   `SimpleLoggerAdvisor` (logging), que é a cadeia de advisors nativa do Spring AI.
+
+### Recursos do Spring AI utilizados
+
+| Recurso do Spring AI | Classes | Onde no projeto |
+|---|---|---|
+| **ChatClient** | `ChatClient`, `ChatClient.Builder` | `config/ChatClientConfig.java` — cliente único do agente sobre o Ollama. |
+| **Tool Calling** | `ToolCallback`, `ToolDefinition`, `ToolCallbackProvider`, `ToolContext` | `agent/tool/AgentCommandToolCallback.java` adapta cada `AgentCommand` para ferramenta nativa; `agent/tool/AgentToolsConfig.java` registra todas em um `ToolCallbackProvider`; `agent/strategy/NativeToolCallingStrategy.java` deixa o modelo decidir e chamar as ferramentas. |
+| **Prompt Templates** | `PromptTemplate`, `SystemPromptTemplate` (StringTemplate) | `agent/prompt/AgentPrompts.java` + arquivos `src/main/resources/prompts/*.st`. |
+| **Structured Output** | `.call().entity(LlmPlan.class)` (`BeanOutputConverter`) | `PlanThenExecuteStrategy` e `ReActPlanningStrategy` convertem a saída do modelo em `LlmPlan`. |
+| **Chat Memory** | `ChatMemory`, `MessageWindowChatMemory` | `config/ChatClientConfig.java` — histórico por `conversationId`. |
+| **Advisors** | `MessageChatMemoryAdvisor`, `SimpleLoggerAdvisor` | `config/ChatClientConfig.java` — Chain of Responsibility nativa. |
+
+O `AgentCommandToolCallback` é um **Adapter** entre o padrão Command do projeto e a interface
+`ToolCallback` do Spring AI: os comandos não conhecem o Spring AI, e a execução continua
+passando pelo `CommandRegistry`. O `AgentExecutionContext` viaja no `ToolContext` (que não
+é enviado ao modelo), então cada ferramenta chamada pelo LLM entra na trace e notifica os
+Observers.
 
 ## Diagrama de classes
 

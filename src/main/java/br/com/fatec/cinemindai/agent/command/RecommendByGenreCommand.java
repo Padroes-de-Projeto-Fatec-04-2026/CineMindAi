@@ -25,6 +25,11 @@ public class RecommendByGenreCommand implements AgentCommand {
     }
 
     @Override
+    public String inputSchema() {
+        return AgentCommand.singleStringArgumentSchema("genre", "Gênero desejado (ex.: terror, comédia, ficção científica)");
+    }
+
+    @Override
     public CommandResult execute(CommandContext context) {
         String genre = context.argument("genre");
         List<MovieSummary> results = catalog.recommendByGenre(genre == null ? "" : genre);

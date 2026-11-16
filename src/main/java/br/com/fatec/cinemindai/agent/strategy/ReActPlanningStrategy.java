@@ -3,7 +3,9 @@ package br.com.fatec.cinemindai.agent.strategy;
 import br.com.fatec.cinemindai.agent.command.CommandExecutionRecord;
 import br.com.fatec.cinemindai.agent.command.CommandRegistry;
 import br.com.fatec.cinemindai.agent.core.AgentExecutionContext;
+import br.com.fatec.cinemindai.agent.prompt.AgentPrompts;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -32,24 +34,17 @@ public class ReActPlanningStrategy implements PlanningStrategy {
     @Override
     public Plan plan(AgentExecutionContext context) {
         ChatClient chatClient = context.services().chatClient();
-        String systemPrompt = """
-                Você é o planejador de um agente de recomendação de filmes, operando no modo ReAct
-                (raciocinar e agir um passo de cada vez).
-                Comandos disponíveis:
-                %s
-                Regras:
-                - Analise as observações já coletadas (resultados de comandos anteriores) antes de decidir.
-                - Se ainda precisar de mais informação, retorne EXATAMENTE 1 item em "steps" e deixe "finalAnswer" vazio.
-                - Se já tem informação suficiente para responder, deixe "steps" vazio e preencha "finalAnswer".
-                - Nunca repita um comando com os mesmos argumentos que já foi executado.
-                """.formatted(commandRegistry.describeAvailableCommands());
+        String systemPrompt = AgentPrompts.REACT_SYSTEM.render(
+                Map.of("commands", commandRegistry.describeAvailableCommands()));
 
-        String observations = describeObservations(context.commandResults());
+        String userPrompt = AgentPrompts.REACT_USER.render(Map.of(
+                "request", context.userMessage(),
+                "observations", describeObservations(context.commandResults())));
 
         LlmPlan llmPlan = chatClient.prompt()
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, context.conversationId()))
                 .system(systemPrompt)
-                .user("Pedido original: " + context.userMessage() + "\n\nObservações até agora:\n" + observations)
+                .user(userPrompt)
                 .call()
                 .entity(LlmPlan.class);
 
