@@ -22,10 +22,11 @@ Para ver a explicação detalhada de cada padrão, trechos de código e todos os
 | Padrão | Categoria | Onde atua no CineMindAi |
 | :--- | :--- | :--- |
 | **State** | Comportamental | Ciclo de vida explícito do agente (`Planning`, `ExecutingCommand`, `AwaitingHumanApproval`, etc.). |
-| **Strategy** | Comportamental | Modos de planejamento com LLM intercambiáveis (`ReAct` vs `Plan-then-Execute`). |
+| **Strategy** | Comportamental | Modos de planejamento com LLM intercambiáveis (`Tool Calling` nativo do Spring AI, `ReAct`, `Plan-then-Execute`). |
 | **Command** | Comportamental | Ações e buscas de filmes desacopladas como comandos despachados pelo `CommandRegistry`. |
 | **Observer** | Comportamental | Emissão de eventos em tempo real para logging, rastreamento de trace e SSE. |
 | **Decorator** | Estrutural | `HumanInTheLoopStrategy` decora a estratégia base exigindo aprovação humana. |
+| **Adapter** | Estrutural | `AgentCommandToolCallback` adapta cada comando para `ToolCallback` do Spring AI (tool calling nativo). |
 | **Adapter & Proxy** | Estruturais | `HybridMovieCatalogAdapter` adapta a OMDb API com caching em memória e fallback automático. |
 | **Facade** | Estrutural | `MovieRecommendationAgentService` simplifica a interface do agente para o controller. |
 | **Chain of Responsibility** | Comportamental | Cadeia de *Advisors* do Spring AI interceptando chamadas ao Ollama (memória e log). |
@@ -70,8 +71,8 @@ A aplicação estará disponível em `http://localhost:8080`.
 
 A aplicação suporta múltiplos modos de planejamento, demonstrando diferentes padrões de interação com agentes de IA.
 
-### 1. Pedido Direto (Plan-then-Execute)
-*O agente escolhe a melhor estratégia (selecionada automaticamente) e executa de forma autônoma.*
+### 1. Pedido Direto (Tool Calling do Spring AI)
+*O agente escolhe a estratégia automaticamente; em pedidos diretos o próprio modelo chama as ferramentas (comandos) via tool calling do Spring AI.*
 ```bash
 curl -X POST http://localhost:8080/api/agent/chat \
   -H "Content-Type: application/json" \
@@ -98,7 +99,9 @@ curl -X POST http://localhost:8080/api/agent/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "Quero algo pra assistir hoje", "plannerMode": "REACT"}'
 ```
-> **Valores aceitos para `plannerMode`:** `AUTO`, `REACT`, `PLAN_THEN_EXECUTE`, `HUMAN_IN_THE_LOOP`.
+> **Valores aceitos para `plannerMode`:** `AUTO`, `TOOL_CALLING`, `REACT`, `PLAN_THEN_EXECUTE`, `HUMAN_IN_THE_LOOP`.
+>
+> No modo `AUTO`, pedidos diretos usam `TOOL_CALLING`: os comandos são registrados como ferramentas do Spring AI (`ToolCallback`) e o próprio modelo decide quais chamar. Os prompts ficam em `src/main/resources/prompts/*.st` e são renderizados com `PromptTemplate`/`SystemPromptTemplate`. Veja a seção *Recursos do Spring AI utilizados* em [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### 4. Acompanhamento em Tempo Real (SSE / Observer)
 *Utiliza Server-Sent Events (SSE) para emitir eventos de mudança de estado da execução em tempo real.*

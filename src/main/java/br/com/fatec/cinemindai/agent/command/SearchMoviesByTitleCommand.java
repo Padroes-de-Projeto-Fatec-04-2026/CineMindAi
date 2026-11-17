@@ -25,6 +25,11 @@ public class SearchMoviesByTitleCommand implements AgentCommand {
     }
 
     @Override
+    public String inputSchema() {
+        return AgentCommand.singleStringArgumentSchema("title", "Título (ou parte do título) do filme");
+    }
+
+    @Override
     public CommandResult execute(CommandContext context) {
         String title = context.argument("title");
         List<MovieSummary> results = catalog.searchByTitle(title == null ? "" : title);

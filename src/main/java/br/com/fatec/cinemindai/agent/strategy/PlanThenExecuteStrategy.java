@@ -2,7 +2,9 @@ package br.com.fatec.cinemindai.agent.strategy;
 
 import br.com.fatec.cinemindai.agent.command.CommandRegistry;
 import br.com.fatec.cinemindai.agent.core.AgentExecutionContext;
+import br.com.fatec.cinemindai.agent.prompt.AgentPrompts;
 import java.util.List;
+import java.util.Map;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.stereotype.Component;
@@ -28,16 +30,8 @@ public class PlanThenExecuteStrategy implements PlanningStrategy {
     @Override
     public Plan plan(AgentExecutionContext context) {
         ChatClient chatClient = context.services().chatClient();
-        String systemPrompt = """
-                Você é o planejador de um agente de recomendação de filmes.
-                Antes de responder, gere um plano completo com todos os comandos necessários.
-                Comandos disponíveis:
-                %s
-                Regras:
-                - Se nenhum comando for necessário para responder, deixe "steps" vazio e preencha "finalAnswer".
-                - Se comandos forem necessários, preencha "steps" e deixe "finalAnswer" vazio (ele será gerado depois, com os resultados).
-                - Responda SOMENTE no formato estruturado pedido.
-                """.formatted(commandRegistry.describeAvailableCommands());
+        String systemPrompt = AgentPrompts.PLAN_THEN_EXECUTE_SYSTEM.render(
+                Map.of("commands", commandRegistry.describeAvailableCommands()));
 
         LlmPlan llmPlan = chatClient.prompt()
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, context.conversationId()))

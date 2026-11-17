@@ -25,6 +25,11 @@ public class RecommendSimilarMoviesCommand implements AgentCommand {
     }
 
     @Override
+    public String inputSchema() {
+        return AgentCommand.singleStringArgumentSchema("title", "Título do filme de referência");
+    }
+
+    @Override
     public CommandResult execute(CommandContext context) {
         String title = context.argument("title");
         List<MovieSummary> results = catalog.recommendSimilarTo(title == null ? "" : title);

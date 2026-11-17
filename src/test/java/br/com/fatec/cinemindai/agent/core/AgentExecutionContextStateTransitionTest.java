@@ -63,7 +63,7 @@ class AgentExecutionContextStateTransitionTest {
                 return new Plan(List.of(new PlannedStep("noop", Map.of(), "teste")), null, false);
             }
         };
-        PlannerSelector fakeSelector = new PlannerSelector(null, null, null) {
+        PlannerSelector fakeSelector = new PlannerSelector(null, null, null, null) {
             @Override
             public PlanningStrategy select(PlannerMode requestedMode, String userMessage) {
                 return fakeStrategy;
@@ -99,7 +99,7 @@ class AgentExecutionContextStateTransitionTest {
                 return new Plan(List.of(new PlannedStep("noop", Map.of(), "teste")), null, true);
             }
         };
-        PlannerSelector fakeSelector = new PlannerSelector(null, null, null) {
+        PlannerSelector fakeSelector = new PlannerSelector(null, null, null, null) {
             @Override
             public PlanningStrategy select(PlannerMode requestedMode, String userMessage) {
                 return fakeStrategy;

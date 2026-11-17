@@ -389,11 +389,12 @@ Apresenta as funcionalidades do sistema e os atores envolvidos:
 | Padrão | Classificação | Classe / Componente Principal | Papel no CineMindAi |
 | :--- | :--- | :--- | :--- |
 | **State** | Comportamental | `agent.state.*` + `AgentExecutionContext` | Máquina de estados do ciclo de vida do agente. |
-| **Strategy** | Comportamental | `agent.strategy.*` + `PlannerSelector` | Modos de planejamento com LLM (ReAct vs Plan-then-Execute). |
+| **Strategy** | Comportamental | `agent.strategy.*` + `PlannerSelector` | Modos de planejamento com LLM (Tool Calling, ReAct, Plan-then-Execute). |
 | **Command** | Comportamental | `agent.command.*` + `CommandRegistry` | Ações executáveis do agente tratadas como objetos uniformes. |
 | **Observer** | Comportamental | `agent.observer.*` | Notificação em tempo real de eventos, logs e streaming SSE. |
 | **Chain of Responsibility**| Comportamental | `ChatClientConfig` (Advisors) | Cadeia de interceptores de memória e logging do Spring AI. |
 | **Decorator** | Estrutural | `HumanInTheLoopStrategy` | Decora a estratégia base para adicionar aprovação humana. |
+| **Adapter** | Estrutural | `AgentCommandToolCallback` | Adapta os comandos do agente para `ToolCallback` do Spring AI (tool calling). |
 | **Adapter** | Estrutural | `HybridMovieCatalogAdapter` | Converte modelos e exceções da OMDb API para o domínio da aplicação. |
 | **Proxy** | Estrutural | `HybridMovieCatalogAdapter` | Proxy com cache em memória e fallback para evitar sobrecarga de rede. |
 | **Facade** | Estrutural | `MovieRecommendationAgentService` | Ponto de entrada unificado que simplifica a execução do agente. |
